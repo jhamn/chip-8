@@ -1,41 +1,33 @@
-# Prerequisites
-*.d
-
-# Compiled Object files
-*.slo
-*.lo
+# Compiled object files
 *.o
 *.obj
 
-# Precompiled Headers
-*.gch
-*.pch
-
-# Linker files
-*.ilk
-
-# Debugger Files
-*.pdb
-
-# Compiled Dynamic libraries
-*.so
-*.dylib
-*.dll
-
-# Fortran module files
-*.mod
-*.smod
-
-# Compiled Static libraries
-*.lai
-*.la
-*.a
-*.lib
-
-# Executables
+# Compiled binary files
+chip8
 *.exe
 *.out
 *.app
 
-# debug information files
-*.dwo
+# Debug / profiling files
+*.log
+*.dSYM/
+*.stackdump
+
+# CMake generated files
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+
+# Visual Studio / VS Code / JetBrains
+.vscode/
+*.code-workspace
+*.suo
+*.user
+*.userosscache
+*.sln
+*.idea/
+
+# Temporary files
+*.tmp
+*~
