@@ -18,6 +18,7 @@ CMakeFiles/
 CMakeCache.txt
 cmake_install.cmake
 Makefile
+/build/
 
 # Visual Studio / VS Code / JetBrains
 .vscode/
@@ -31,3 +32,5 @@ Makefile
 # Temporary files
 *.tmp
 *~
+
+/roms/
