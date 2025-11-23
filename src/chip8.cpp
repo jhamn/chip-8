@@ -10,12 +10,14 @@ Chip8::Chip8() {
     delay_timer = 0;
     sound_timer = 0;
     drawFlag = false;
+    highRes  = false;
 
     for(int i = 0; i < 4096; ++i) memory[i] = 0;
     for(int i = 0; i < 16; ++i) V[i] = 0;
     for(int i = 0; i < 16; ++i) stack[i] = 0;
-    for(int i = 0; i < 64*32; ++i) gfx[i] = 0;
     for(int i = 0; i < 16; ++i) key[i] = 0;
+    
+    for(int i = 0; i < Chip8::MAX_WIDTH * Chip8::MAX_HEIGHT; ++i) gfx[i] = 0;
 
     static const uint8_t chip8_fontset[80] = {
         0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
@@ -72,7 +74,7 @@ void Chip8::emulateCycle() {
     case 0x0000:
         switch (nn) {
         case 0xE0: // CLS
-            std::fill(gfx, gfx + 64*32, 0);
+            for (int i = 0; i < screenWidth() * screenHeight(); ++i) gfx[i] = 0;
             drawFlag = true;
             break;
         
@@ -80,6 +82,18 @@ void Chip8::emulateCycle() {
             sp--;
             pc = stack[sp];
             advancePC = false;
+            break;
+
+        case 0xFE: // disable high-res
+            highRes = false;
+            for(int i = 0; i < screenWidth() * screenHeight(); ++i) gfx[i] = 0;
+            drawFlag = true;
+            break;
+
+        case 0xFF: // enable high-res
+            highRes = true;
+            for(int i = 0; i < screenWidth() * screenHeight(); ++i) gfx[i] = 0;
+            drawFlag = true;
             break;
 
         default:
@@ -140,7 +154,7 @@ void Chip8::emulateCycle() {
 
         case 0x6: // SHR Vx
             V[0xF] = V[x] & 1;
-            V[x] >>= 1;
+            V[x] = V[y] >> 1;
             break;
 
         case 0x7: // SUBN Vx = Vy - Vx
@@ -150,7 +164,7 @@ void Chip8::emulateCycle() {
 
         case 0xE: // SHL Vx
             V[0xF] = (V[x] & 0x80) >> 7;
-            V[x] <<= 1;
+            V[x] = V[y] << 1;
             break;
 
         default:
@@ -177,15 +191,19 @@ void Chip8::emulateCycle() {
         break;
 
     case 0xD000: { // DXYN - DRAW
-        uint8_t xPos = V[x] % 64;
-        uint8_t yPos = V[y] % 32;
+        int w = screenWidth();
+        int h = screenHeight();
+        int xPos = V[x] % w;
+        int yPos = V[y] % h;
         V[0xF] = 0;
 
         for(int row = 0; row < n; row++) {
             uint8_t pixel = memory[I + row];
             for(int col = 0; col < 8; col++) {
                 if (pixel & (0x80 >> col)) {
-                    int idx = ((yPos + row) % 32) * 64 + ((xPos + col) % 64);
+                    int xx = (xPos + col) % w;
+                    int yy = (yPos + row) % h;
+                    int idx = yy * w + xx;
                     if (gfx[idx] == 1) V[0xF] = 1;
                     gfx[idx] ^= 1;
                 }

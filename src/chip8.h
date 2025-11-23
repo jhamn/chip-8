@@ -10,9 +10,16 @@ public:
     void loadROM(const std::string &filename);
     void emulateCycle();
     void updateTimers();
-    uint8_t gfx[64*32];
+    
+    static constexpr int MAX_WIDTH = 128;
+    static constexpr int MAX_HEIGHT = 64;
+    uint8_t gfx[MAX_WIDTH * MAX_HEIGHT];
     uint8_t key[16];
     bool drawFlag;
+
+    bool highRes;
+    inline int screenWidth()  const { return highRes ? 128 : 64; }
+    inline int screenHeight() const { return highRes ?  64 : 32; }
     
     private:
     uint8_t memory[4096];

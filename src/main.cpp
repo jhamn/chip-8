@@ -3,8 +3,6 @@
 #include "chip8.h"
 
 const int VIDEO_SCALE = 10;
-const int VIDEO_WIDTH = 64;
-const int VIDEO_HEIGHT = 32;
 
 int main(int argc, char* argv[]) {
   if(argc < 2) {
@@ -22,7 +20,7 @@ int main(int argc, char* argv[]) {
 
   SDL_Window* window = SDL_CreateWindow("CHIP-8 Emulator",
     SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-    VIDEO_WIDTH * VIDEO_SCALE, VIDEO_HEIGHT * VIDEO_SCALE, SDL_WINDOW_SHOWN);
+    chip8.screenWidth() * VIDEO_SCALE, chip8.screenHeight() * VIDEO_SCALE, SDL_WINDOW_SHOWN);
 
   if(!window){
     std::cerr << "SDL_CreateWindow Error: " << SDL_GetError() << std::endl;
@@ -86,10 +84,29 @@ int main(int argc, char* argv[]) {
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
     SDL_RenderClear(renderer);
     SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-    for(int y = 0; y < VIDEO_HEIGHT; ++y){
-      for(int x = 0; x < VIDEO_WIDTH; ++x){
-        if(chip8.gfx[y * VIDEO_WIDTH + x]) {
-          SDL_Rect rect = { x * VIDEO_SCALE, y * VIDEO_SCALE, VIDEO_SCALE, VIDEO_SCALE };
+
+    int screenW, screenH;
+    SDL_GetRendererOutputSize(renderer, &screenW, &screenH);
+
+    int logicalW = chip8.screenWidth();
+    int logicalH = chip8.screenHeight();
+
+    float scaleX = (float)screenW / logicalW;
+    float scaleY = (float)screenH / logicalH;
+    int scale = (int)std::floor(std::min(scaleX, scaleY));
+
+    int offsetX = (screenW - logicalW * scale) / 2;
+    int offsetY = (screenH - logicalH * scale) / 2;
+
+    for(int y = 0; y < logicalH; ++y){
+      for(int x = 0; x < logicalW; ++x){
+        if(chip8.gfx[y * logicalW + x]) {
+          SDL_Rect rect = {
+            offsetX + x * scale,
+            offsetY + y * scale,
+            scale,
+            scale    
+          };
           SDL_RenderFillRect(renderer, &rect);
         }
       }
