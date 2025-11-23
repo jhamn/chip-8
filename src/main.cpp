@@ -1,64 +1,104 @@
 #include <SDL2/SDL.h>
-#include <chrono>
+#include <iostream>
 #include "chip8.h"
 
-int main() {
-  // Init SDL
-  SDL_Init(SDL_INIT_VIDEO);
+const int VIDEO_SCALE = 10;
+const int VIDEO_WIDTH = 64;
+const int VIDEO_HEIGHT = 32;
 
-  SDL_Window* window = SDL_CreateWindow(
-      "CHIP-8 Emulator",
-      SDL_WINDOWPOS_CENTERED,
-      SDL_WINDOWPOS_CENTERED,
-      640, 320,
-      SDL_WINDOW_SHOWN
-  );
+int main(int argc, char* argv[]) {
+  if(argc < 2) {
+    std::cout << "Usage: " << argv[0] << " <ROM file>\n";
+    return 1;
+  }
 
-  SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, 0);
+  Chip8 chip8;
+  chip8.loadROM(argv[1]);
 
-  Chip8 chip;
-  chip.loadROM("../roms/PONG.ch8");
+  if(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_TIMER) != 0) {
+    std::cerr << "SDL_Init Error: " << SDL_GetError() << std::endl;
+    return 1;
+  }
 
-  const int SCALE = 10;
+  SDL_Window* window = SDL_CreateWindow("CHIP-8 Emulator",
+    SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+    VIDEO_WIDTH * VIDEO_SCALE, VIDEO_HEIGHT * VIDEO_SCALE, SDL_WINDOW_SHOWN);
+
+  if(!window){
+    std::cerr << "SDL_CreateWindow Error: " << SDL_GetError() << std::endl;
+    return 1;
+  }
+
+  SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+  if(!renderer) {
+    std::cerr << "SDL_CreateRenderer Error: " << SDL_GetError() << std::endl;
+    SDL_DestroyWindow(window);
+    SDL_Quit();
+    return 1;
+  }
+
   bool running = true;
-  SDL_Event e;
+  SDL_Event event;
 
-  auto last_timer_update = std::chrono::high_resolution_clock::now();
+  const int CYCLES_PER_FRAME = 8;
+  const int FPS = 120;
+  const int FRAME_DELAY = 1000 / FPS;
 
-  while (running) {
-    // SDL events (quit)
-    while (SDL_PollEvent(&e)) {
-      if (e.type == SDL_QUIT) running = false;
-    }
+  while(running) {
+    Uint32 frameStart = SDL_GetTicks();
 
-    // Run one CPU cycle
-    chip.emulateCycle();
+    while(SDL_PollEvent(&event)) {
+      if(event.type == SDL_QUIT)
+        running = false;
 
-    // Timer at 60 Hz
-    auto now = std::chrono::high_resolution_clock::now();
-    float ms = std::chrono::duration<float, std::milli>(now - last_timer_update).count();
-    if (ms > 16.6f) {
-      chip.updateTimers();
-      last_timer_update = now;
-    }
+      if(event.type == SDL_KEYDOWN || event.type == SDL_KEYUP) {
+        bool pressed = event.type == SDL_KEYDOWN;
 
-    // Draw screen
-    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-    SDL_RenderClear(renderer);
+        switch(event.key.keysym.sym) {
+          case SDLK_1: chip8.key[0x1] = pressed; break;
+          case SDLK_2: chip8.key[0x2] = pressed; break;
+          case SDLK_3: chip8.key[0x3] = pressed; break;
+          case SDLK_4: chip8.key[0xC] = pressed; break;
 
-    for(int y = 0; y < 32; y++) {
-      for(int x = 0; x < 64; x++) {
-        if (chip.gfx[y * 64 + x]) {
-          SDL_Rect r { x * SCALE, y * SCALE, SCALE, SCALE };
-          SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-          SDL_RenderFillRect(renderer, &r);
+          case SDLK_q: chip8.key[0x4] = pressed; break;
+          case SDLK_w: chip8.key[0x5] = pressed; break;
+          case SDLK_e: chip8.key[0x6] = pressed; break;
+          case SDLK_r: chip8.key[0xD] = pressed; break;
+
+          case SDLK_a: chip8.key[0x7] = pressed; break;
+          case SDLK_s: chip8.key[0x8] = pressed; break;
+          case SDLK_d: chip8.key[0x9] = pressed; break;
+          case SDLK_f: chip8.key[0xE] = pressed; break;
+
+          case SDLK_z: chip8.key[0xA] = pressed; break;
+          case SDLK_x: chip8.key[0x0] = pressed; break;
+          case SDLK_c: chip8.key[0xB] = pressed; break;
+          case SDLK_v: chip8.key[0xF] = pressed; break;
         }
       }
     }
 
+    for(int i = 0; i < CYCLES_PER_FRAME; i++){
+      chip8.emulateCycle();
+    }
+    chip8.updateTimers();
+    
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+    SDL_RenderClear(renderer);
+    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+    for(int y = 0; y < VIDEO_HEIGHT; ++y){
+      for(int x = 0; x < VIDEO_WIDTH; ++x){
+        if(chip8.gfx[y * VIDEO_WIDTH + x]) {
+          SDL_Rect rect = { x * VIDEO_SCALE, y * VIDEO_SCALE, VIDEO_SCALE, VIDEO_SCALE };
+          SDL_RenderFillRect(renderer, &rect);
+        }
+      }
+    }
     SDL_RenderPresent(renderer);
 
-    SDL_Delay(1); // Small delay to avoid 100% CPU
+    Uint32 frameTime = SDL_GetTicks() - frameStart;
+    if(FRAME_DELAY > frameTime)
+      SDL_Delay(FRAME_DELAY - frameTime);
   }
 
   SDL_DestroyRenderer(renderer);

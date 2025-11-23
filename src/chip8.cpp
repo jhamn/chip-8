@@ -90,6 +90,7 @@ void Chip8::emulateCycle() {
 
     case 0x1000: // JP addr
         pc = nnn;
+        advancePC = false;
         break;
 
     case 0x2000: // 2NNN - CALL addr
@@ -184,7 +185,7 @@ void Chip8::emulateCycle() {
             uint8_t pixel = memory[I + row];
             for(int col = 0; col < 8; col++) {
                 if (pixel & (0x80 >> col)) {
-                    int idx = (yPos + row) % 32 * 64 + (xPos + col) % 64;
+                    int idx = ((yPos + row) % 32) * 64 + ((xPos + col) % 64);
                     if (gfx[idx] == 1) V[0xF] = 1;
                     gfx[idx] ^= 1;
                 }
